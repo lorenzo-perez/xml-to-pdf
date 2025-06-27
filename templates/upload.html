@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XML to PDF Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+        
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .upload-text {
+            color: #666;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.2s ease;
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: none;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+        
+        .file-info {
+            background: #e8f5e8;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .file-name {
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .file-size {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .flash-messages {
+            margin-bottom: 1rem;
+        }
+        
+        .flash-message {
+            padding: 0.8rem;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .flash-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .flash-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .download-section {
+            background: #e8f5e8;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-top: 1rem;
+            text-align: center;
+            border: 2px solid #28a745;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .info {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            color: #1565c0;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 XML to PDF Converter</h1>
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        {% if message == 'File successfully processed!' %}
+                            <div class="flash-message success">{{ message }}</div>
+                            <!-- Show download section -->
+                            <div class="download-section">
+                                <h3>🎉 ¡Tu PDF está listo!</h3>
+                                <p>El archivo XML se ha convertido exitosamente a PDF.</p>
+                                <!-- The download should have started automatically, but if not: -->
+                                <p><small>Si la descarga no comenzó automáticamente, haz clic abajo:</small></p>
+                                <a href="#" onclick="window.history.back(); return false;" class="download-btn">
+                                    📥 Descargar PDF
+                                </a>
+                                <br><br>
+                                <a href="/" style="color: #666; text-decoration: none;">← Procesar otro archivo</a>
+                            </div>
+                        {% else %}
+                            <div class="flash-message error">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        <form id="uploadForm" method="post" enctype="multipart/form-data">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    <strong>Choose an XML file</strong> or drag it here
+                </div>
+                <input type="file" name="file" id="fileInput" class="file-input" accept=".xml" required>
+                <button type="button" class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Browse Files
+                </button>
+            </div>
+            
+            <div class="file-info" id="fileInfo">
+                <div class="file-name" id="fileName"></div>
+                <div class="file-size" id="fileSize"></div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submitBtn">
+                Convert to PDF 🚀
+            </button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Processing your XML file...
+        </div>
+        
+        <div class="info">
+            <strong>How it works:</strong><br>
+            1. Upload your XML file (max 16MB)<br>
+            2. The app will parse and structure the data<br>
+            3. Download your formatted PDF report
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const loading = document.getElementById('loading');
+
+        // File input change event
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Drag and drop events
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                // Check file type
+                if (!file.name.toLowerCase().endsWith('.xml')) {
+                    alert('Please select an XML file.');
+                    fileInput.value = '';
+                    return;
+                }
+
+                // Show file info
+                fileName.textContent = file.name;
+                fileSize.textContent = `Size: ${(file.size / 1024).toFixed(1)} KB`;
+                fileInfo.style.display = 'block';
+                submitBtn.style.display = 'block';
+            }
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', (e) => {
+            const file = fileInput.files[0];
+            if (!file) {
+                e.preventDefault();
+                alert('Please select a file first.');
+                return;
+            }
+            
+            // Show loading
+            uploadArea.style.display = 'none';
+            fileInfo.style.display = 'none';
+            submitBtn.style.display = 'none';
+            loading.style.display = 'block';
+        });
+
+        // Handle file size validation
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file && file.size > 16 * 1024 * 1024) { // 16MB
+                alert('File size must be less than 16MB');
+                this.value = '';
+                fileInfo.style.display = 'none';
+                submitBtn.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
